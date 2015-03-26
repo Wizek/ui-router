@@ -54,6 +54,18 @@ describe('state', function () {
       .state('OPT.OPT2', OPT2)
       .state('RS', RS)
 
+      .state('S1', {
+        url: '/S1',
+        controller: function ($scope, $rootScope) {
+          log += 'controller;';
+          $scope.$watch(function () { return $rootScope.value }, function (val) {
+            log += '$watchTriggered:' + val + ';';
+          });
+          $scope.$on('$destroy', function () { log += 'destroyed;'; });
+        }
+      })
+      .state('S2', { url: '/S2', controller: function () { log += 'controller;' } })
+
       .state('home', { url: "/" })
       .state('home.item', { url: "front/:id" })
       .state('about', { url: "/about" })
@@ -531,6 +543,7 @@ describe('state', function () {
       $q.flush();
       expect(log).toBe('Success!controller;Success!controller;');
     }));
+
   });
 
   describe('.is()', function () {
@@ -771,6 +784,8 @@ describe('state', function () {
         'OPT',
         'OPT.OPT2',
         'RS',
+        'S1',
+        'S2',
         'about',
         'about.person',
         'about.person.item',
@@ -1074,6 +1089,24 @@ describe('state', function () {
 
       expect($location.replace).not.toHaveBeenCalled();
 
+    }));
+
+
+    it('should not fire $watchers on old scope when navigation is under way', inject(function ($location, $state, $q, $compile, $timeout, $rootScope) {
+      $compile('<div> <div ui-view/> </div>')($rootScope);
+      $rootScope.value = 'initialValue'
+
+      $location.url('/S1');
+      $rootScope.$apply();
+      expect(log).toBe('controller;$watchTriggered:initialValue;');
+
+      $location.url('/S2');
+      $rootScope.value = 'changedValue';
+      $rootScope.$apply();
+      expect(log).toBe(
+        'controller;$watchTriggered:initialValue;' +
+        'destroyed;controller;'
+      );
     }));
   });
 
